@@ -3,14 +3,13 @@ import Filter from './components/Filter'
 import Form from './components/Form'
 import List from './components/List'
 import Notification from './components/Notification'
-import axios from 'axios'
 import methods from './services/phone'
 
 const App = () => {
   const [persons, setPersons] = useState([]) 
 
   useEffect(() => {
-    axios.get('http://localhost:3001/persons').then(response=>{setPersons(response.data)})},[])
+    methods.getAll().then(response=>{setPersons(response.data)})},[])
   
   const [newName, setNewName] = useState('')
   const [newNumber,setNewNumber] = useState('')
@@ -43,12 +42,12 @@ const App = () => {
   const deleteHandler = (id,name) => {
     if (window.confirm(`Delete ${name}?`)) {
         methods.deleter(id)
-        .then(response=>{
+        .then(()=>{
             console.log("deleted")
             setPersons([...persons].filter(person=>!(person.id===id)))
             usual('complete',`Deleted ${name}`)
         })
-        .catch(error=>{
+        .catch(()=>{
           usual('error',`Information of ${name} has already been removed from server`)
           methods.getAll().then(response=>{
             setPersons(response.data)
@@ -59,21 +58,26 @@ const App = () => {
 
   const onClickAction = (names,numbers) => {
       event.preventDefault()
-      let x = persons.reduce((y,x)=>(x.name===names) ? x : null,null)
+      let x = persons.reduce((y,x)=>(x.name===names) ? x : y,null)
       if (x!==null) {
         if (window.confirm(`${x.name} is already added to phonebook, replace the old number with a new one?`)) {
           x = {...x, number:numbers}
-          methods.update(x).then(response=>{
+          methods.update(x).then(()=>{
             setPersons([...persons].map(person=>(person.id===x.id ? x : person)))
             usual('complete',`Amended ${names}`)
+          }).catch(error=>{
+            usual('error',`${error.response.data.fault}`)
           })
         }
       }
       else {
         methods.create({name: names, number:numbers})
         .then(response => {
+          console.log(response.data)
           setPersons(persons.concat(response.data))
           usual('complete',`Added ${names}`)
+        }).catch(error=>{
+          usual('error', `${error.response.data.fault}`)
         })
       }
   }
